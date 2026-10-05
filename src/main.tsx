@@ -1,11 +1,12 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "./AuthProvider";
-import ProtectedRoute from "./ProtectedRoute";
-import Login from "./Login";
-import BoardList from "./BoardList";
-import BoardEditor from "./BoardEditor";
+import { AuthProvider } from "./features/auth/AuthProvider";
+import ProtectedRoute from "./features/auth/ProtectedRoute";
+import Login from "./features/auth/Login";
+import BoardList from "./features/boards/BoardList";
+import BoardEditor from "./features/boards/BoardEditor";
+import "./styles/tokens.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

@@ -2,13 +2,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   Excalidraw,
-  getSceneVersion,
   exportToBlob,
   exportToSvg,
   serializeAsJSON,
 } from "@excalidraw/excalidraw";
 import "@excalidraw/excalidraw/index.css";
-import { supabase } from "./supabase";
+import { supabase } from "../../lib/supabase";
+import styles from "./BoardEditor.module.css";
 
 type SaveStatus = "saved" | "saving" | "error";
 
@@ -28,6 +28,10 @@ const download = (blob: Blob, filename: string) => {
   URL.revokeObjectURL(url);
 };
 
+/** Lightweight scene version: sum of element versions */
+const sceneVersion = (elements: any[]): number =>
+  elements.reduce((acc: number, el: any) => acc + (el.version ?? 0), 0);
+
 export default function BoardEditor() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -38,17 +42,16 @@ export default function BoardEditor() {
   const [status, setStatus] = useState<SaveStatus>("saved");
   const [theme, setTheme] = useState<"light" | "dark">("light");
   const [exportOpen, setExportOpen] = useState(false);
-
   const [presenting, setPresenting] = useState(false);
   const [frameIdx, setFrameIdx] = useState(0);
   const [frameCount, setFrameCount] = useState(0);
 
-  const timer = useRef<any>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastVersion = useRef(-1);
   const latest = useRef<{ elements: any; appState: any; files: any } | null>(null);
   const dirty = useRef(false);
 
-  // ---------- load ----------
+  // ── load ──────────────────────────────────────────────────────────────────
   useEffect(() => {
     supabase
       .from("boards")
@@ -58,7 +61,7 @@ export default function BoardEditor() {
       .then(({ data, error }) => {
         if (error || !data) return navigate("/");
         const s = data.scene ?? { elements: [], files: {} };
-        lastVersion.current = getSceneVersion(s.elements ?? []);
+        lastVersion.current = sceneVersion(s.elements ?? []);
         setTitle(data.title);
         setInitial({
           elements: s.elements ?? [],
@@ -69,9 +72,9 @@ export default function BoardEditor() {
       });
   }, [id, navigate]);
 
-  // ---------- save ----------
+  // ── save ──────────────────────────────────────────────────────────────────
   const saveNow = useCallback(async () => {
-    clearTimeout(timer.current);
+    if (timer.current) clearTimeout(timer.current);
     if (!latest.current || !dirty.current) return;
     const { elements, appState, files } = latest.current;
     setStatus("saving");
@@ -81,14 +84,17 @@ export default function BoardEditor() {
     if (live.length) {
       try {
         const blob = await exportToBlob({
-          elements, appState, files, mimeType: "image/png",
+          elements,
+          appState,
+          files,
+          mimeType: "image/png",
           getDimensions: (w: number, h: number) => {
             const scale = 300 / Math.max(w, h);
             return { width: w * scale, height: h * scale, scale };
           },
         });
         thumbnail = await blobToDataUrl(blob);
-      } catch { /* thumbnail is optional; never block the save */ }
+      } catch { /* thumbnail is optional */ }
     }
 
     const { error } = await supabase
@@ -109,20 +115,20 @@ export default function BoardEditor() {
   }, [id]);
 
   const handleChange = (elements: any, appState: any, files: any) => {
-    const v = getSceneVersion(elements);
+    const v = sceneVersion(elements);
     if (v === lastVersion.current) return;
     lastVersion.current = v;
     latest.current = { elements, appState, files };
     dirty.current = true;
     setStatus("saving");
-    clearTimeout(timer.current);
+    if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(saveNow, 1500);
   };
 
-  // warn before closing the tab with unsaved changes
+  // warn on unsaved close
   useEffect(() => {
     const warn = (e: BeforeUnloadEvent) => {
-      if (dirty.current) { e.preventDefault(); e.returnValue = ""; }
+      if (dirty.current) e.preventDefault();
     };
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
@@ -139,7 +145,7 @@ export default function BoardEditor() {
     await supabase.from("boards").update({ title: t }).eq("id", id);
   };
 
-  // ---------- export ----------
+  // ── export ────────────────────────────────────────────────────────────────
   const exportPng = async () => {
     const api = apiRef.current;
     const blob = await exportToBlob({
@@ -152,7 +158,7 @@ export default function BoardEditor() {
     setExportOpen(false);
   };
 
-  const exportSvg = async () => {
+  const exportSvgFile = async () => {
     const api = apiRef.current;
     const svg = await exportToSvg({
       elements: api.getSceneElements(),
@@ -163,16 +169,19 @@ export default function BoardEditor() {
     setExportOpen(false);
   };
 
-  const exportFile = () => {
+  const exportExcalidraw = () => {
     const api = apiRef.current;
     const json = serializeAsJSON(
-      api.getSceneElements(), api.getAppState(), api.getFiles(), "local"
+      api.getSceneElements(),
+      api.getAppState(),
+      api.getFiles(),
+      "local"
     );
     download(new Blob([json], { type: "application/json" }), `${title}.excalidraw`);
     setExportOpen(false);
   };
 
-  // ---------- present mode ----------
+  // ── present mode ──────────────────────────────────────────────────────────
   const getFrames = () =>
     (apiRef.current?.getSceneElements() ?? [])
       .filter((e: any) => e.type === "frame" && !e.isDeleted)
@@ -189,13 +198,12 @@ export default function BoardEditor() {
 
   const startPresenting = async () => {
     if (!getFrames().length) {
-      alert("This board has no frames yet. Press F and draw a frame around each slide.");
+      alert("No frames found. Press F and draw a frame around each slide first.");
       return;
     }
     await saveNow();
     setPresenting(true);
     try { await document.documentElement.requestFullscreen(); } catch {}
-    // wait a tick so view mode applies before moving the camera
     setTimeout(() => goToFrame(0), 100);
   };
 
@@ -207,12 +215,10 @@ export default function BoardEditor() {
   useEffect(() => {
     if (!presenting) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "ArrowRight" || e.key === " " || e.key === "PageDown") goToFrame(frameIdx + 1);
-      if (e.key === "ArrowLeft" || e.key === "PageUp") goToFrame(frameIdx - 1);
+      if (["ArrowRight", " ", "PageDown"].includes(e.key)) goToFrame(frameIdx + 1);
+      if (["ArrowLeft", "PageUp"].includes(e.key)) goToFrame(frameIdx - 1);
       if (e.key === "Escape") stopPresenting();
     };
-    // Esc exits browser fullscreen *before* your keydown fires,
-    // so also end presenting when fullscreen is left by any route
     const onFs = () => { if (!document.fullscreenElement) setPresenting(false); };
     window.addEventListener("keydown", onKey);
     document.addEventListener("fullscreenchange", onFs);
@@ -222,57 +228,87 @@ export default function BoardEditor() {
     };
   }, [presenting, frameIdx, goToFrame, stopPresenting]);
 
+  // ── render ────────────────────────────────────────────────────────────────
   const initialData = useMemo(() => initial, [initial]);
-  if (!initialData) return <p style={{ textAlign: "center", marginTop: "30vh" }}>Loading...</p>;
 
-  const statusText =
-    status === "saved" ? "Saved" : status === "saving" ? "Saving..." : "Save failed. Retrying on next change.";
+  if (!initialData) {
+    return (
+      <div className="state-center" style={{ marginTop: "30vh" }}>
+        <p>Loading board…</p>
+      </div>
+    );
+  }
+
+  const statusLabel =
+    status === "saved"  ? "Saved" :
+    status === "saving" ? "Saving…" :
+    "Save failed — will retry";
 
   return (
-    <div style={{ height: "100vh", display: "flex", flexDirection: "column" }}>
-      {/* ---------- top bar ---------- */}
+    <div className={styles.shell}>
+      {/* ── top bar ── */}
       {!presenting && (
-        <div style={{ height: 48, display: "flex", alignItems: "center", gap: 12,
-                      padding: "0 12px", borderBottom: "1px solid #ddd", background: "#fff" }}>
-          <button onClick={goBack}>← Boards</button>
+        <div className={styles.topbar}>
+          <button className="btn btn-ghost" onClick={goBack} aria-label="Back to boards">
+            ← Boards
+          </button>
 
           <input
+            className={styles.titleInput}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             onBlur={saveTitle}
             onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
             aria-label="Board title"
-            style={{ fontSize: 16, fontWeight: 500, border: "1px solid transparent",
-                     padding: "4px 8px", borderRadius: 6, minWidth: 200 }}
           />
 
-          <span style={{ fontSize: 13, color: status === "error" ? "crimson" : "#666" }}>
-            {statusText}
+          <span
+            className={styles.saveStatus}
+            data-error={status === "error"}
+            aria-live="polite"
+          >
+            {statusLabel}
           </span>
 
-          <div style={{ marginLeft: "auto", display: "flex", gap: 8, position: "relative" }}>
-            <button onClick={() => setTheme(theme === "light" ? "dark" : "light")}>
-              {theme === "light" ? "Dark" : "Light"}
+          <div className={styles.topbarActions}>
+            <button
+              className="btn btn-ghost"
+              onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+              aria-label="Toggle theme"
+            >
+              {theme === "light" ? "🌙" : "☀️"}
             </button>
 
-            <button onClick={() => setExportOpen(!exportOpen)}>Export ▾</button>
-            {exportOpen && (
-              <div style={{ position: "absolute", top: 38, right: 90, background: "#fff",
-                            border: "1px solid #ddd", borderRadius: 8, padding: 4, zIndex: 20,
-                            display: "flex", flexDirection: "column", minWidth: 150 }}>
-                <button onClick={exportPng}>PNG image</button>
-                <button onClick={exportSvg}>SVG image</button>
-                <button onClick={exportFile}>.excalidraw file</button>
-              </div>
-            )}
+            <div className={styles.exportWrap}>
+              <button
+                className="btn"
+                onClick={() => setExportOpen(!exportOpen)}
+                aria-expanded={exportOpen}
+                aria-haspopup="menu"
+              >
+                Export ▾
+              </button>
+              {exportOpen && (
+                <>
+                  <div className={styles.exportBackdrop} onClick={() => setExportOpen(false)} />
+                  <div className={styles.exportMenu} role="menu">
+                    <button className={styles.exportItem} role="menuitem" onClick={exportPng}>PNG image</button>
+                    <button className={styles.exportItem} role="menuitem" onClick={exportSvgFile}>SVG image</button>
+                    <button className={styles.exportItem} role="menuitem" onClick={exportExcalidraw}>.excalidraw file</button>
+                  </div>
+                </>
+              )}
+            </div>
 
-            <button onClick={startPresenting}>▶ Present</button>
+            <button className="btn btn-primary" onClick={startPresenting}>
+              ▶ Present
+            </button>
           </div>
         </div>
       )}
 
-      {/* ---------- editor ---------- */}
-      <div style={{ flex: 1, position: "relative" }}>
+      {/* ── canvas ── */}
+      <div className={styles.canvas}>
         <Excalidraw
           excalidrawAPI={(api: any) => (apiRef.current = api)}
           initialData={initialData}
@@ -283,17 +319,29 @@ export default function BoardEditor() {
           UIOptions={{ canvasActions: { loadScene: false, saveToActiveFile: false } }}
         />
 
-        {/* ---------- present controls ---------- */}
+        {/* ── present controls ── */}
         {presenting && (
-          <div style={{ position: "absolute", bottom: 20, left: "50%", transform: "translateX(-50%)",
-                        display: "flex", alignItems: "center", gap: 12, padding: "8px 14px",
-                        background: "rgba(0,0,0,0.75)", color: "#fff", borderRadius: 999, zIndex: 20 }}>
-            <button onClick={() => goToFrame(frameIdx - 1)} aria-label="Previous slide">←</button>
-            <span style={{ fontSize: 14, minWidth: 48, textAlign: "center" }}>
+          <div className={styles.presentBar} role="toolbar" aria-label="Presentation controls">
+            <button
+              className={styles.presentBtn}
+              onClick={() => goToFrame(frameIdx - 1)}
+              aria-label="Previous slide"
+            >
+              ←
+            </button>
+            <span className={styles.presentCounter}>
               {frameIdx + 1} / {frameCount}
             </span>
-            <button onClick={() => goToFrame(frameIdx + 1)} aria-label="Next slide">→</button>
-            <button onClick={stopPresenting}>Exit</button>
+            <button
+              className={styles.presentBtn}
+              onClick={() => goToFrame(frameIdx + 1)}
+              aria-label="Next slide"
+            >
+              →
+            </button>
+            <button className={styles.presentBtn} onClick={stopPresenting}>
+              Exit
+            </button>
           </div>
         )}
       </div>

@@ -1,10 +1,5 @@
-import { Excalidraw } from "@excalidraw/excalidraw";
-import "@excalidraw/excalidraw/index.css";
-
+// App.tsx is intentionally thin — routing lives in main.tsx.
+// Keep this file if you need a layout wrapper in the future.
 export default function App() {
-  return (
-    <div style={{ height: "100vh" }}>
-      <Excalidraw />
-    </div>
-  );
+  return null;
 }

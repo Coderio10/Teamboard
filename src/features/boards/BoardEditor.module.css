@@ -1,0 +1,141 @@
+.shell {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  overflow: hidden;
+}
+
+/* ── top bar ── */
+.topbar {
+  height: var(--topbar-h);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 0 var(--space-3);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+  z-index: 10;
+}
+
+.titleInput {
+  font-family: var(--font-ui);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 4px var(--space-2);
+  min-width: 180px;
+  max-width: 340px;
+  transition: border-color 0.15s, background 0.15s;
+}
+.titleInput:hover  { border-color: var(--border); background: var(--surface); }
+.titleInput:focus  {
+  outline: none;
+  border-color: var(--border-focus);
+  background: var(--bg);
+  box-shadow: 0 0 0 2px var(--brand-soft);
+}
+
+.saveStatus {
+  font-size: 13px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.saveStatus[data-error="true"] { color: var(--error); }
+
+.topbarActions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* ── export dropdown ── */
+.exportWrap {
+  position: relative;
+}
+
+.exportBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 19;
+}
+
+.exportMenu {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  z-index: 20;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-1);
+  box-shadow: var(--card-shadow-hover);
+  min-width: 160px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.exportItem {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  color: var(--text);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.exportItem:hover { background: var(--surface); }
+
+/* ── canvas area ── */
+.canvas {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+/* ── present controls ── */
+.presentBar {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(8px);
+  border-radius: var(--radius-pill);
+  z-index: 20;
+}
+
+.presentBtn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: var(--radius-sm);
+  color: #fff;
+  padding: 4px 10px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.presentBtn:hover { background: rgba(255, 255, 255, 0.15); }
+
+.presentCounter {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.85);
+  min-width: 52px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}

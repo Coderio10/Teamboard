@@ -3,7 +3,15 @@ import { useAuth } from "./AuthProvider";
 
 export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { session, loading } = useAuth();
-  if (loading) return <p style={{ textAlign: "center", marginTop: "30vh" }}>Loading...</p>;
+
+  if (loading) {
+    return (
+      <div className="state-center" style={{ marginTop: "30vh" }}>
+        <p>Loading…</p>
+      </div>
+    );
+  }
+
   if (!session) return <Navigate to="/login" replace />;
   return <>{children}</>;
 }
