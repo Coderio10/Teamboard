@@ -68,8 +68,8 @@
 /* ─── Dark mode ─────────────────────────────────────────────────────────── */
 @media (prefers-color-scheme: dark) {
   :root {
-    --brand:          #2a4f8a;
-    --brand-hover:    #3a62a0;
+    --brand:          #0A204A; 
+    --brand-hover:    #2a4f8a;
     --brand-active:   #4a72b0;
     --brand-soft:     #0e1e36;
     --brand-soft-hover: #162b4d;

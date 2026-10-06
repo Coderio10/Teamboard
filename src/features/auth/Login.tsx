@@ -33,7 +33,7 @@ export default function Login() {
     <div className={styles.shell}>
       <div className={styles.card}>
         <div className={styles.logo}>
-          <img src={logoAlt} alt="TeamBoard logo" width={125} height={32} />
+          <img src={logoAlt} alt="TeamBoard logo" width={96} height={24} />
         </div>
 
         <h1 className={styles.heading}>TeamBoard</h1>
