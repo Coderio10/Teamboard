@@ -51,25 +51,29 @@ export default function BoardEditor() {
   const latest = useRef<{ elements: any; appState: any; files: any } | null>(null);
   const dirty = useRef(false);
 
+  // library
+  const libraryLoaded = useRef(false);
+  const libraryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // ── load ──────────────────────────────────────────────────────────────────
   useEffect(() => {
-    supabase
-      .from("boards")
-      .select("title,scene")
-      .eq("id", id)
-      .single()
-      .then(({ data, error }) => {
-        if (error || !data) return navigate("/");
-        const s = data.scene ?? { elements: [], files: {} };
-        lastVersion.current = sceneVersion(s.elements ?? []);
-        setTitle(data.title);
-        setInitial({
-          elements: s.elements ?? [],
-          files: s.files ?? {},
-          appState: { viewBackgroundColor: s.viewBackgroundColor ?? "#ffffff" },
-          scrollToContent: true,
-        });
+    Promise.all([
+      supabase.from("boards").select("title,scene").eq("id", id).single(),
+      supabase.from("team_library").select("items").eq("id", 1).maybeSingle(),
+    ]).then(([boardRes, libRes]) => {
+      if (boardRes.error || !boardRes.data) return navigate("/");
+      const s = boardRes.data.scene ?? { elements: [], files: {} };
+      lastVersion.current = sceneVersion(s.elements ?? []);
+      setTitle(boardRes.data.title);
+      libraryLoaded.current = !libRes.error;
+      setInitial({
+        elements: s.elements ?? [],
+        files: s.files ?? {},
+        appState: { viewBackgroundColor: s.viewBackgroundColor ?? "#ffffff" },
+        libraryItems: libRes.data?.items ?? [],
+        scrollToContent: true,
       });
+    });
   }, [id, navigate]);
 
   // ── save ──────────────────────────────────────────────────────────────────
@@ -114,6 +118,24 @@ export default function BoardEditor() {
     }
   }, [id]);
 
+  // ── library save ──────────────────────────────────────────────────────────
+  // items is typed as the first parameter of Excalidraw's onLibraryChange prop
+  type LibraryItems = Parameters<
+    NonNullable<React.ComponentProps<typeof Excalidraw>["onLibraryChange"]>
+  >[0];
+
+  const handleLibraryChange = useCallback((items: LibraryItems) => {
+    if (!libraryLoaded.current) return;
+    if (libraryTimer.current) clearTimeout(libraryTimer.current);
+    libraryTimer.current = setTimeout(async () => {
+      const { error } = await supabase
+        .from("team_library")
+        .upsert({ id: 1, items, updated_at: new Date().toISOString() });
+      if (error) console.error("Library save failed:", error);
+    }, 1000);
+  }, []);
+
+  // ── scene change ──────────────────────────────────────────────────────────
   const handleChange = (elements: any, appState: any, files: any) => {
     const v = sceneVersion(elements);
     if (v === lastVersion.current) return;
@@ -132,6 +154,13 @@ export default function BoardEditor() {
     };
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
+  }, []);
+
+  // clear library timer on unmount
+  useEffect(() => {
+    return () => {
+      if (libraryTimer.current) clearTimeout(libraryTimer.current);
+    };
   }, []);
 
   const goBack = async () => {
@@ -313,6 +342,8 @@ export default function BoardEditor() {
           excalidrawAPI={(api: any) => (apiRef.current = api)}
           initialData={initialData}
           onChange={handleChange}
+          onLibraryChange={handleLibraryChange}
+          libraryReturnUrl={window.location.href}
           theme={theme}
           viewModeEnabled={presenting}
           zenModeEnabled={presenting}
