@@ -1,53 +1,33 @@
 import { useState } from "react";
+import { Navigate } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
+import { useAuth } from "./AuthProvider";
 import styles from "./Login.module.css";
-import logoAlt from "../../assets/logo alt.png"
+import logoAlt from "../../assets/logo alt.png";
 
 export default function Login() {
-  const [email, setEmail] = useState("");
-  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
-  const [message, setMessage] = useState("");
+  const { session, loading } = useAuth();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setStatus("sending");
+  // Already signed in — go straight to the app
+  if (!loading && session) return <Navigate to="/" replace />;
 
-    const { error } = await supabase.auth.signInWithOtp({
-      email: email.trim(),
-      options: {
-        shouldCreateUser: false,
-        emailRedirectTo: window.location.origin,
-      },
+  const handleGoogleSignIn = async () => {
+    setBusy(true);
+    setError("");
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: window.location.origin },
     });
 
     if (error) {
-      setStatus("error");
-      setMessage(error.message);
-    } else {
-      setStatus("sent");
+      setError("Couldn't start sign-in. Please try again.");
+      setBusy(false);
     }
+    // On success the browser redirects — no further state update needed
   };
-
-  if (status === "sent") {
-    return (
-      <div className={styles.shell}>
-        <div className={styles.card}>
-          <div className={styles.icon} aria-hidden="true">✉️</div>
-          <h1 className={styles.heading}>Check your email</h1>
-          <p className={styles.sub}>
-            We sent a magic link to <strong>{email}</strong>.<br />
-            Click it to sign in — no password needed.
-          </p>
-          <button
-            className="btn"
-            onClick={() => setStatus("idle")}
-          >
-            Use a different email
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className={styles.shell}>
@@ -55,36 +35,26 @@ export default function Login() {
         <div className={styles.logo}>
           <img src={logoAlt} alt="TeamBoard logo" width={125} height={32} />
         </div>
-        <h1 className={styles.heading}>TeamBoard</h1>
-        <p className={styles.sub}>Sign in with your team email to continue.</p>
 
-        <form onSubmit={handleLogin} className={styles.form}>
-          <label className={styles.label} htmlFor="email">Email</label>
-          <input
-            id="email"
-            className="input"
-            type="email"
-            required
-            placeholder="you@company.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-          <button
-            type="submit"
-            className="btn btn-primary"
-            disabled={status === "sending"}
-            style={{ width: "100%", justifyContent: "center", padding: "10px" }}
-          >
-            {status === "sending" ? "Sending link…" : "Send login link"}
-          </button>
-        </form>
-        <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 6 }}>
+        <h1 className={styles.heading}>TeamBoard</h1>
+        <p className={styles.sub}>Sign in to access your team's boards.</p>
+
+        <button
+          className="btn btn-primary"
+          onClick={handleGoogleSignIn}
+          disabled={busy || loading}
+          style={{ width: "100%", justifyContent: "center", padding: "10px" }}
+        >
+          {busy ? "Redirecting…" : "Continue with Google"}
+        </button>
+
+        {error && (
+          <p className={styles.error} role="alert">{error}</p>
+        )}
+
+        <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 6, textAlign: "center" }}>
           You'll stay signed in on this device for 30 days.
         </p>
-
-        {status === "error" && (
-          <p className={styles.error} role="alert">{message}</p>
-        )}
       </div>
     </div>
   );

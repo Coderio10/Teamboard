@@ -40,7 +40,7 @@ export default function BoardEditor() {
   const [initial, setInitial] = useState<any>(null);
   const [title, setTitle] = useState("");
   const [status, setStatus] = useState<SaveStatus>("saved");
-  const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [theme, setTheme] = useState<"light" | "dark">("dark");
   const [exportOpen, setExportOpen] = useState(false);
   const [presenting, setPresenting] = useState(false);
   const [frameIdx, setFrameIdx] = useState(0);

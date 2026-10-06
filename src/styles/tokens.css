@@ -3,15 +3,15 @@
    Excalidraw app so the two surfaces feel like one product.
 ────────────────────────────────────────────────────────────────────────── */
 
-@import url("https://fonts.googleapis.com/css2?family=Virgil&family=Assistant:wght@400;500;600&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Virgil&family=Manrope:wght@400;500;600&display=swap");
 
 :root {
   /* brand */
-  --brand:          #6965db;
-  --brand-hover:    #5651c5;
-  --brand-active:   #4a46b0;
-  --brand-soft:     #e8e7fb;
-  --brand-soft-hover: #d8d7f8;
+  --brand:          #0A204A;
+  --brand-hover:    #0d2a61;
+  --brand-active:   #0a1e3d;
+  --brand-soft:     #e6eaf2;
+  --brand-soft-hover: #d4dbe8;
   --on-brand:       #ffffff;
 
   /* surface */
@@ -29,7 +29,7 @@
   /* border */
   --border:         #e0e0e6;
   --border-strong:  #c5c5d0;
-  --border-focus:   #6965db;
+  --border-focus:   #0A204A;
 
   /* state */
   --error:          #e03131;
@@ -42,8 +42,8 @@
   --card-shadow-hover: 0 4px 12px rgba(0,0,0,0.12), 0 2px 6px rgba(0,0,0,0.07);
 
   /* typography */
-  --font-ui:        "Assistant", system-ui, -apple-system, sans-serif;
-  --font-display:   "Virgil", "Assistant", sans-serif;
+  --font-ui:        "Manrope", system-ui, -apple-system, sans-serif;
+  --font-display:   "Virgil", "Manrope", sans-serif;
 
   /* spacing scale */
   --space-1: 4px;
@@ -68,12 +68,12 @@
 /* ─── Dark mode ─────────────────────────────────────────────────────────── */
 @media (prefers-color-scheme: dark) {
   :root {
-    --brand:          #8b87e6;
-    --brand-hover:    #a09cf0;
-    --brand-active:   #b5b2f5;
-    --brand-soft:     #2a2950;
-    --brand-soft-hover: #33326a;
-    --on-brand:       #121212;
+    --brand:          #2a4f8a;
+    --brand-hover:    #3a62a0;
+    --brand-active:   #4a72b0;
+    --brand-soft:     #0e1e36;
+    --brand-soft-hover: #162b4d;
+    --on-brand:       #ffffff;
 
     --bg:             #121212;
     --surface:        #1e1e24;
@@ -86,7 +86,7 @@
 
     --border:         #2e2e3a;
     --border-strong:  #44445a;
-    --border-focus:   #8b87e6;
+    --border-focus:   #2a4f8a;
 
     --error:          #ff6b6b;
     --error-soft:     #2a1515;
