@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { supabase } from "../../lib/supabase";
 import styles from "./Login.module.css";
+import logoAlt from "../../assets/logo alt.png"
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -51,12 +52,8 @@ export default function Login() {
   return (
     <div className={styles.shell}>
       <div className={styles.card}>
-        <div className={styles.logo} aria-hidden="true">
-          <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
-            <rect width="36" height="36" rx="8" fill="var(--brand)" />
-            <path d="M8 26L14 10L20 22L24 14L30 26" stroke="white" strokeWidth="2.5"
-              strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+        <div className={styles.logo}>
+          <img src={logoAlt} alt="TeamBoard logo" width={125} height={32} />
         </div>
         <h1 className={styles.heading}>TeamBoard</h1>
         <p className={styles.sub}>Sign in with your team email to continue.</p>
@@ -81,6 +78,9 @@ export default function Login() {
             {status === "sending" ? "Sending link…" : "Send login link"}
           </button>
         </form>
+        <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 6 }}>
+          You'll stay signed in on this device for 30 days.
+        </p>
 
         {status === "error" && (
           <p className={styles.error} role="alert">{message}</p>
